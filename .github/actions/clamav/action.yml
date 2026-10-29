@@ -1,5 +1,5 @@
 name: ClamAV
-description: Installs ClamAV with current virus definitions in .clamav (set CLAMAV_DB=.clamav for the scan).
+description: Installs ClamAV with current virus definitions, copied to .clamav (set CLAMAV_DB=.clamav for the scan).
 runs:
   using: composite
   steps:
@@ -7,8 +7,10 @@ runs:
       shell: bash
       run: |
         sudo apt-get -qq update && sudo apt-get -qq install -y clamav >/dev/null
+        # The package starts its own updater; it holds the database lock and races this one.
+        sudo systemctl stop clamav-freshclam || true
         echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-    # One saved copy a day (about 250 MB); freshclam fetches the day's changes on top of it.
+    # One saved copy a day (about 250 MB); freshclam fetches only the day's changes on top of it.
     - uses: actions/cache@v4
       with:
         path: .clamav
@@ -17,8 +19,10 @@ runs:
     - shell: bash
       run: |
         mkdir -p .clamav
-        # A minimal config: run as the runner user, no log file, definitions in the workspace.
-        printf 'DatabaseMirror database.clamav.net\n' > "$RUNNER_TEMP/freshclam.conf"
-        # Never scan without definitions: a failed refresh is only fine when the cache has some.
-        freshclam --config-file="$RUNNER_TEMP/freshclam.conf" --datadir=.clamav --quiet \
-          || ls .clamav/main.cvd .clamav/main.cld 2>/dev/null | grep -q .
+        if ls .clamav/*.c?d >/dev/null 2>&1; then
+          sudo cp .clamav/*.c?d /var/lib/clamav/
+          sudo chown clamav:clamav /var/lib/clamav/*.c?d
+        fi
+        # Never scan without definitions: a failed refresh is only fine when the cache had some.
+        sudo freshclam --quiet || ls /var/lib/clamav/main.c?d >/dev/null
+        cp /var/lib/clamav/*.c?d .clamav/
