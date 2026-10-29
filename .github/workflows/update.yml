@@ -1,0 +1,64 @@
+name: Update pinned listings
+# Every hour, each listing whose branch has a newer commit is checked and scanned at that commit. A
+# commit that passes becomes the new pin; one that fails keeps the old pin and opens an issue.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: update-pins
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: ./.github/actions/clamav
+      - run: node scripts/update.mjs --scan
+        env:
+          CLAMAV_DB: .clamav
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Commit moved pins
+        run: |
+          [ -n "$(git status --porcelain -- plugins packs store.json)" ] || exit 0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add plugins packs store.json
+          git commit -q -m 'chore: move pins to scanned commits' \
+            -m "$(jq -r '.updated[] | "\(.ids | join(", ")): \(.repo)@\(.commit[0:12])"' update-report.json)"
+          git push
+      - name: Report held updates
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f update-report.json ] || exit 0
+          gh label create update-held --color B60205 --description 'A newer commit failed the checks or the scan' --force >/dev/null
+          open_issue() {
+            gh issue list --label update-held --state open --json number,title \
+              --jq ".[] | select(.title == \"Update held: $1\") | .number" | head -1
+          }
+          jq -c '.held[]' update-report.json | while read -r item; do
+            repo=$(jq -r .repo <<<"$item")
+            commit=$(jq -r '.commit // ""' <<<"$item")
+            body=$(jq -r '(if .commit then "Commit https://github.com/\(.repo)/commit/\(.commit) kept the old pin.\n\n" else "" end) + (.errors | map("- " + .) | join("\n"))' <<<"$item")
+            number=$(open_issue "$repo")
+            if [ -z "$number" ]; then
+              gh issue create --title "Update held: $repo" --label update-held --body "$body"
+            elif [ -z "$commit" ] || ! gh issue view "$number" --json body,comments --jq '[.body, .comments[].body] | join("\n")' | grep -q "$commit"; then
+              # One report per commit: the hourly run re-checks the same commit until a newer one lands.
+              gh issue comment "$number" --body "$body"
+            fi
+          done
+          jq -r '.updated[].repo' update-report.json | while read -r repo; do
+            number=$(open_issue "$repo")
+            [ -z "$number" ] || gh issue close "$number" --comment 'A newer commit passed the checks and the scan, and the pin moved.'
+          done

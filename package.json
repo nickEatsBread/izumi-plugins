@@ -1,0 +1,18 @@
+{
+  "name": "izumi-plugins",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs --write",
+    "test": "node --test scripts/lib.test.mjs && node scripts/build.mjs",
+    "ci": "node --test scripts/lib.test.mjs && node scripts/build.mjs --scan",
+    "update": "node scripts/update.mjs"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "fflate": "^0.8.2"
+  }
+}

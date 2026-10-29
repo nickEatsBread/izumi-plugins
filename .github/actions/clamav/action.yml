@@ -1,0 +1,24 @@
+name: ClamAV
+description: Installs ClamAV with current virus definitions in .clamav (set CLAMAV_DB=.clamav for the scan).
+runs:
+  using: composite
+  steps:
+    - id: day
+      shell: bash
+      run: |
+        sudo apt-get -qq update && sudo apt-get -qq install -y clamav >/dev/null
+        echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+    # One saved copy a day (about 250 MB); freshclam fetches the day's changes on top of it.
+    - uses: actions/cache@v4
+      with:
+        path: .clamav
+        key: clamav-${{ steps.day.outputs.day }}
+        restore-keys: clamav-
+    - shell: bash
+      run: |
+        mkdir -p .clamav
+        # A minimal config: run as the runner user, no log file, definitions in the workspace.
+        printf 'DatabaseMirror database.clamav.net\n' > "$RUNNER_TEMP/freshclam.conf"
+        # Never scan without definitions: a failed refresh is only fine when the cache has some.
+        freshclam --config-file="$RUNNER_TEMP/freshclam.conf" --datadir=.clamav --quiet \
+          || ls .clamav/main.cvd .clamav/main.cld 2>/dev/null | grep -q .

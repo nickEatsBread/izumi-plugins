@@ -1,0 +1,10 @@
+{
+  "app": "izumi",
+  "kind": "store",
+  "schemaVersion": 1,
+  "id": "izumi-plugins",
+  "name": "izumi plugins",
+  "description": "Plugins and packs reviewed for izumi. Each listing is pinned to a commit of its author's repository that passed the checks and a virus scan.",
+  "homepage": "https://github.com/nickEatsBread/izumi-plugins",
+  "entries": []
+}
