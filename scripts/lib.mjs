@@ -277,7 +277,8 @@ export async function resolveSource(listing, io, { verify = true } = {}) {
 
 // What izumi's plugin runtime accepts in plugin.json (src/lib/plugins/manifest.ts in the client).
 // Keep these in step with it.
-const PLUGIN_SCOPES = ['network', 'player.events', 'player.control', 'player.subtitles', 'player.panel']
+const PLUGIN_SCOPES = ['network', 'signin', 'player.events', 'player.control', 'player.subtitles', 'player.panel']
+const PLUGIN_API = 2
 const SETTING_TYPES = ['text', 'secret', 'toggle', 'select', 'number', 'url']
 const PLUGIN_ID = /^[a-z0-9]+(?:[.-][a-z0-9]+)+$/
 const DOMAIN = /^(\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
@@ -307,6 +308,15 @@ function checkSetting(value) {
       field(option.label, 'option label', 100)
     }
   }
+  if (value.links !== undefined) {
+    need(Array.isArray(value.links) && value.links.length <= 4, `plugin setting ${id} has too many links`)
+    for (const link of value.links) {
+      object(link, 'setting link')
+      field(link.label, 'link label', 40)
+      const url = field(link.url, 'link url', 300)
+      need(url.startsWith('https://') && URL.canParse(url), `plugin setting ${id} links must be https`)
+    }
+  }
   if (value.default !== undefined) {
     need(value.type !== 'secret', `plugin secret ${id} cannot have a default`)
     need(['string', 'number', 'boolean'].includes(typeof value.default), `plugin setting ${id} has an invalid default`)
@@ -319,7 +329,7 @@ function checkSetting(value) {
 export function checkPluginManifest(raw) {
   object(raw, 'manifest')
   need(raw.app === 'izumi' && raw.kind === 'plugin' && raw.schemaVersion === 1, 'plugin.json is not an izumi plugin (app "izumi", kind "plugin", schemaVersion 1)')
-  need(raw.pluginApi === 1, 'plugin.json must use pluginApi 1')
+  need(Number.isInteger(raw.pluginApi) && raw.pluginApi >= 1 && raw.pluginApi <= PLUGIN_API, `plugin.json must use a pluginApi from 1 to ${PLUGIN_API}`)
   const id = field(raw.id, 'id', 100)
   need(PLUGIN_ID.test(id), 'plugin id must look like "com.example.name"')
   const version = field(raw.version, 'version', 20)
@@ -355,6 +365,7 @@ export function checkPluginManifest(raw) {
   } else {
     need(!scopes.includes('network'), 'the "network" permission needs permissions.network')
   }
+  need(!scopes.includes('signin') || domains.length, 'the "signin" permission needs network domains to sign in to')
   if (raw.panel !== undefined) {
     need(scopes.includes('player.panel'), 'a player panel needs the "player.panel" permission')
     const panel = object(raw.panel, 'panel')
@@ -362,7 +373,7 @@ export function checkPluginManifest(raw) {
     field(panel.placeholder, 'panel.placeholder', 120)
   }
   const grant = JSON.stringify({ scopes: [...scopes].sort(), domains: [...domains].sort(), fromSetting: fromSetting ?? null })
-  return { id, name, version, author, description, main: { path: mainPath, sha256: mainSha }, grant }
+  return { id, name, version, author, description, pluginApi: raw.pluginApi, main: { path: mainPath, sha256: mainSha }, grant }
 }
 
 /** A plugin listing's store entry: its plugin.json at the pinned commit, which pins its main file by
@@ -390,7 +401,7 @@ export async function resolvePlugin(listing, io, { verify = true } = {}) {
   return {
     entry: compact({
       kind: 'plugin', id: manifest.id, name: manifest.name, version: manifest.version, author: manifest.author,
-      description: manifest.description, pluginApi: 1, url, sha256: sha256(bytes), bytes: bytes.length,
+      description: manifest.description, pluginApi: manifest.pluginApi, url, sha256: sha256(bytes), bytes: bytes.length,
       homepage: `https://github.com/${listing.repo}${dir === '.' ? '' : `/tree/${listing.commit}/${dir}`}`, updatedAt: listing.updatedAt,
     }),
     grant: manifest.grant,

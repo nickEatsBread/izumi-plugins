@@ -23,7 +23,7 @@ Sources (what finds titles and streams) are not plugins: see [building a source]
   "app": "izumi",
   "kind": "plugin",
   "schemaVersion": 1,
-  "pluginApi": 1,
+  "pluginApi": 2,
   "id": "example.my-plugin",
   "name": "My Plugin",
   "version": "1.0.0",
@@ -49,8 +49,9 @@ Sources (what finds titles and streams) are not plugins: see [building a source]
 | `main` | `path`: a `.js` file next to `plugin.json`. `sha256`: its SHA-256, so izumi runs exactly that file. |
 | `permissions.scopes` | What it may do (below). Ask only for what it needs. |
 | `permissions.network` | Needed with `network`. `domains`: https hosts (`*.example.com` allowed). `fromSetting`: a `url` setting whose address the user types. `reason`: shown to the user before they install. |
-| `settings` | Up to 40. `type` is `text`, `secret`, `toggle`, `select` (with `options`), `number` or `url`. A secret can't have a `default`. |
+| `settings` | Up to 40. `type` is `text`, `secret`, `toggle`, `select` (with `options`), `number` or `url`. A secret can't have a `default`. `links` (up to 4 `{ label, url }`, https only) are pages izumi opens in the browser, such as where to get an API key. |
 | `panel` | A panel in the player, with its button label and prompt. Needs `player.panel`. |
+| `pluginApi` | `2` for the `signin` scope, secrets, the account block and setting links; izumi releases before them only run `1`. |
 
 `plugin.json` may be at most 64 KB, and the main file at most 2 MB.
 
@@ -63,6 +64,7 @@ Sources (what finds titles and streams) are not plugins: see [building a source]
 | `player.subtitles` | `izumi.player.subtitles()`: the selected text subtitle track as cues. |
 | `player.control` | `izumi.player.seek(seconds)`. |
 | `player.panel` | `izumi.ui.setPanel(state)`: a prompt, steps and result cards that izumi draws. |
+| `signin` | Sign-in in the user's browser (OAuth with a loopback redirect). `izumi.signin.listen(path)` listens on a free port on this computer and returns `{ port }`; use `http://127.0.0.1:<port><path>` (or `localhost`) as the redirect URI. `izumi.signin.open(url)` opens the browser, only at an https address on your `network.domains`. `izumi.signin.wait()` returns the redirect's query parameters, or fails after 10 minutes or `izumi.signin.cancel()`. Check `state`, and use PKCE: izumi doesn't. Needs `network` with fixed domains. |
 
 Every plugin has its settings, 5 MB of storage and a log without asking.
 
@@ -86,14 +88,16 @@ export default {
 | --- | --- |
 | `izumi.settings.get()` | The setting values, secrets included. |
 | `izumi.storage.get(key)`, `.set(key, value)`, `.delete(key)` | The plugin's own storage. |
+| `izumi.secrets.get(key)`, `.set(key, value)`, `.delete(key)` | Strings kept with the plugin's secret settings (up to 16 KB each), for tokens and keys from a sign-in. Only the plugin reads them; removing it deletes them. |
 | `izumi.fetch(url, { method, headers, body })` | `GET` or `POST` only. `{ status, ok, headers, text(), json() }`. |
 | `izumi.player.status()` | `{ open: false }`, or `{ open, title, episode, anilistId, position, duration, paused }`. |
 | `izumi.player.subtitles()` | `{ available, track, cues: [{ start, end, text }], tracks }`, or `{ available: false, reason }`. The cues are shifted by the user's subtitle delay. |
 | `izumi.player.seek(seconds)` | Seeks the player. |
 | `izumi.ui.setPanel({ activity, turns })` | Draws the player panel. A turn is `{ id, question, steps, text, seconds }`; a step is `{ label, state, icon, cards }`; a card is `{ id, title, subtitle, meta, quote, image: 'poster', icon }`. |
 | `izumi.ui.notice(text)` | A short notice in the player. |
+| `izumi.ui.setAccount({ text, buttons })` | The account block at the top of the plugin's settings: a line of text and up to 4 buttons `{ id, label, primary }`. A click sends an `account` event. |
 | `izumi.log(...parts)` | A line in the plugin's log (its page under **Settings → Sources and store → Plugins**). |
-| `izumi.on(name, handler)` | Panel events: `prompt` (`{ text }`), `select` (`{ id }` of a card), `stop` and `reset`. |
+| `izumi.on(name, handler)` | Panel events: `prompt` (`{ text }`), `select` (`{ id }` of a card), `stop` and `reset`. Settings: `account` (`{ id }` of an account button). |
 
 The plugin runs in a Worker inside a sandboxed frame. `fetch`, `XMLHttpRequest`, `WebSocket` and
 `EventSource` are removed, and the frame's content security policy blocks every other connection.

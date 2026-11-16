@@ -2,49 +2,133 @@
   "app": "izumi",
   "kind": "plugin",
   "schemaVersion": 1,
-  "pluginApi": 1,
+  "pluginApi": 2,
   "id": "watch.izumi.jump-to-moment",
   "name": "Jump to a moment",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Izumi",
-  "description": "Describe a scene and the player jumps to it. Uses the episode's subtitles and a chat model you choose, on your computer or with your own key.",
+  "description": "Describe a scene and the player jumps to it. Uses the episode's subtitles and a chat model: sign in with ChatGPT or OpenRouter, paste an API key, or use a model on your computer.",
   "main": {
     "path": "main.js",
-    "sha256": "27c701ca1a5c20db92c00a75ef1822881de535a291506eab7bc75ab119b98007"
+    "sha256": "2ae7828b981ce18267e35e553eb1dca12a928f81ab00f6e74c9905242b126e75"
   },
   "permissions": {
     "scopes": [
       "network",
+      "signin",
       "player.events",
       "player.subtitles",
       "player.control",
       "player.panel"
     ],
     "network": {
-      "domains": [],
+      "domains": [
+        "auth.openai.com",
+        "api.openai.com",
+        "chatgpt.com",
+        "openrouter.ai",
+        "api.anthropic.com",
+        "generativelanguage.googleapis.com"
+      ],
       "fromSetting": "endpoint",
-      "reason": "Sends your question, the title and the episode's subtitle lines to the model address you enter, and nowhere else."
+      "reason": "Sends your question, the title and the episode's subtitle lines to the model service you choose, and nowhere else. Sign-in goes to OpenAI or OpenRouter in your browser; chatgpt.com is only opened for your ChatGPT usage page."
     }
   },
   "settings": [
     {
+      "id": "openrouterModel",
+      "type": "select",
+      "label": "OpenRouter model",
+      "description": "Used when you sign in with OpenRouter. Free models cost nothing (OpenRouter limits how many questions a day); the others use your OpenRouter credits.",
+      "default": "openrouter/free",
+      "options": [
+        {
+          "value": "openrouter/free",
+          "label": "Free models (OpenRouter picks one)"
+        },
+        {
+          "value": "~google/gemini-flash-latest",
+          "label": "Gemini Flash (Google, paid)"
+        },
+        {
+          "value": "~google/gemini-pro-latest",
+          "label": "Gemini Pro (Google, paid)"
+        },
+        {
+          "value": "~anthropic/claude-haiku-latest",
+          "label": "Claude Haiku (Anthropic, paid)"
+        },
+        {
+          "value": "~anthropic/claude-sonnet-latest",
+          "label": "Claude Sonnet (Anthropic, paid)"
+        },
+        {
+          "value": "~openai/gpt-mini-latest",
+          "label": "GPT mini (OpenAI, paid)"
+        },
+        {
+          "value": "~deepseek/deepseek-flash-latest",
+          "label": "DeepSeek Flash (paid)"
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "select",
+      "label": "Without signing in, use",
+      "description": "Used when you are not signed in above.",
+      "default": "custom",
+      "options": [
+        {
+          "value": "openai",
+          "label": "An OpenAI API key"
+        },
+        {
+          "value": "anthropic",
+          "label": "An Anthropic API key (Claude)"
+        },
+        {
+          "value": "google",
+          "label": "A Google AI Studio API key (Gemini)"
+        },
+        {
+          "value": "custom",
+          "label": "An OpenAI-compatible address, such as a model on this computer"
+        }
+      ]
+    },
+    {
+      "id": "apiKey",
+      "type": "secret",
+      "label": "API key",
+      "description": "The key for the choice above. Leave empty for a model on this computer. Stays on this device.",
+      "links": [
+        {
+          "label": "Get an OpenAI key",
+          "url": "https://platform.openai.com/api-keys"
+        },
+        {
+          "label": "Get an Anthropic key",
+          "url": "https://platform.claude.com/settings/keys"
+        },
+        {
+          "label": "Get a Google AI Studio key",
+          "url": "https://aistudio.google.com/apikey"
+        }
+      ]
+    },
+    {
       "id": "endpoint",
       "type": "url",
       "label": "Model address",
-      "description": "An OpenAI-compatible chat API, such as a local model server's /v1 address or your provider's API base.",
+      "description": "For an OpenAI-compatible address: a local model server's /v1 address or a provider's API base.",
       "placeholder": "http://localhost:11434/v1"
     },
     {
       "id": "model",
       "type": "text",
       "label": "Model",
-      "description": "The model's name at that address."
-    },
-    {
-      "id": "apiKey",
-      "type": "secret",
-      "label": "API key",
-      "description": "Leave empty for a model on this computer. Stays on this device."
+      "description": "For an API key or address. Leave empty for the service's default; an address needs one."
     },
     {
       "id": "watchedOnly",
