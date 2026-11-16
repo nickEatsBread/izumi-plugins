@@ -1,216 +1,133 @@
 # Building an izumi plugin
 
-An izumi plugin is a **source**: it finds titles, episodes and streams for izumi. It ships as a
-signed `.izumi-ext` package that izumi installs from a store. This guide covers the package, the
-two kinds of plugin, signing, and publishing a store from your own repository. Getting listed in
-this repository comes after that; see the [README](../README.md#submitting-a-plugin-or-a-pack).
+A plugin adds a feature to izumi. It runs in izumi's plugin sandbox, with no access to the user's
+accounts, sources or files, and it can only do what the user allowed when they installed it. Users
+find plugins under **Settings → Plugins** (a beta, off until they switch it on).
 
-| Backend | What runs | Choose it when |
-| --- | --- | --- |
-| `izumi-js` | One JavaScript module, in izumi's sandboxed extension worker. One package for every platform. | The source only needs HTTP requests. |
-| `izumi-service` | A native program izumi starts on the user's device. One package per platform. | You need a real runtime: a sign-in flow, a local proxy, protected playback, or a catalog of your own. |
+A plugin is two files in one folder of your repository:
 
-Local services are desktop only (Windows, macOS, Linux and the Steam Deck).
-
-## The package
-
-A `.izumi-ext` file is a ZIP archive, at most 160 MB, holding exactly these five files at its root.
-izumi refuses any other file (only macOS `__MACOSX/`, `.DS_Store` and `._*` entries are ignored).
-
-| File | Contents |
-| --- | --- |
-| `manifest.json` | What the package is. |
-| `compatibility.json` | The runtime it targets, and for a service the platform it was built for. |
-| `extension.js`, `service` or `service.exe` | The code: `extension.js` for `izumi-js`, `service.exe` for a Windows service, `service` everywhere else. |
-| `integrity.json` | The SHA-256 of the three files above. |
-| `signature.json` | An Ed25519 signature over `integrity.json`. |
-
-`manifest.json`:
-
-```json
-{
-  "formatVersion": 1,
-  "runtimeAbi": 1,
-  "id": "example.my-source",
-  "name": "My Source",
-  "version": "1.0.0",
-  "entry": "service",
-  "execution": { "backend": "izumi-service", "status": "compatible" },
-  "sources": [{ "id": "example.my-source", "name": "My Source", "language": "en", "baseUrl": "https://example.com" }]
-}
+```
+plugin/
+  plugin.json   what it is and what it may do
+  main.js       its code: one JavaScript module
 ```
 
-- `id` is permanent. Use lowercase letters, digits, dots and hyphens (2-64 characters), for example
-  `yourname.source-name`. The store entry, the listing folder and the package all use it.
-- `version` is `major.minor.patch`. Every release gets a new one.
-- `entry` is `extension.js`, `service` or `service.exe`, matching the backend and platform.
+[Jump to a moment](../official/jump-to-moment/) is a complete example.
 
-`compatibility.json` is `{ "runtime": "izumi-anime-extension-v1" }` for `izumi-js`, and for a
-service `{ "runtime": "izumi-local-service-v1", "platform": "linux-x86_64" }` with one of
-`windows-x86_64`, `windows-aarch64`, `linux-x86_64`, `linux-aarch64`, `macos-x86_64` or
-`macos-aarch64`.
+Sources (what finds titles and streams) are not plugins: see [building a source](building-a-source.md).
 
-`integrity.json`:
-
-```json
-{
-  "algorithm": "SHA-256",
-  "files": {
-    "manifest.json": "<lowercase hex SHA-256>",
-    "compatibility.json": "<lowercase hex SHA-256>",
-    "service": "<lowercase hex SHA-256>"
-  }
-}
-```
-
-### Signing
-
-`signature.json` holds your public key and the signature of `integrity.json` in canonical form:
-object keys sorted, no whitespace.
-
-```json
-{ "algorithm": "Ed25519", "signed": true, "publicKey": "-----BEGIN PUBLIC KEY-----\n…", "signature": "<base64>" }
-```
-
-With Node.js:
-
-```js
-import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
-
-const canonical = (value) => value === null || typeof value !== 'object'
-  ? JSON.stringify(value)
-  : Array.isArray(value)
-    ? `[${value.map(canonical).join(',')}]`
-    : `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`
-
-const privateKey = createPrivateKey(process.env.IZUMI_SIGNING_KEY) // an Ed25519 PKCS#8 PEM
-const signature = {
-  algorithm: 'Ed25519',
-  signed: true,
-  publicKey: createPublicKey(privateKey).export({ type: 'spki', format: 'pem' }),
-  signature: sign(null, Buffer.from(canonical(integrity)), privateKey).toString('base64'),
-}
-```
-
-Create the key once (`openssl genpkey -algorithm ed25519`) and keep it for the life of the plugin,
-in a CI secret rather than the repository. izumi refuses an update signed with a different key, and
-this repository holds back any update whose key changed until a maintainer has reviewed it. If the
-key is lost or leaked, open an issue here.
-
-## A local service (`izumi-service`)
-
-izumi starts your program when the source is first needed and stops it when izumi closes. It sets:
-
-| Variable | Meaning |
-| --- | --- |
-| `IZUMI_EXTENSION_PORT` | The port to listen on. Listen on `127.0.0.1` only. |
-| `IZUMI_EXTENSION_DATA_DIR` | A folder that belongs to your service. Keep sessions, tokens and caches here and nowhere else. |
-| `IZUMI_EXTENSION_ID` | Your package id. |
-| `IZUMI_PARENT_PID` | izumi's process id. Exit when that process is gone. |
-
-Your service answers:
-
-- **`GET /index.json`** (required): the source manifest. izumi waits until this returns JSON, then
-  treats your service like any other source.
-
-  ```json
-  {
-    "id": "example.my-source",
-    "name": "My Source",
-    "version": "1.0.0",
-    "type": "onlinestream-provider",
-    "lang": "en",
-    "description": "What the source does and what it needs.",
-    "icon": "https://example.com/icon.png",
-    "main": "provider.js",
-    "catalog": "/catalog/manifest.json"
-  }
-  ```
-
-  `main` is the provider module izumi loads from your service (see
-  [the provider module](#the-provider-module)). `catalog` is optional: the path of a Stremio-style
-  addon manifest your service serves. izumi then offers your catalog as a screen of its own.
-- **`GET` and `POST /__izumi/settings`** (optional): a settings form izumi draws natively, for
-  sign-in and preferences. The document's shape is `ServiceSettingsDocument` in izumi's
-  [`src/lib/extensions/manager.ts`](https://github.com/nickEatsBread/izumi/blob/main/src/lib/extensions/manager.ts):
-  fields (`text`, `password`, `number`, `boolean`, `select`), current values, an optional notice,
-  and `complete: true` once the source is ready to use (packs wait for it during setup). `POST`
-  receives `{ "values": { … } }` and returns the updated document.
-- **`POST /__izumi/shutdown`** (optional): izumi asks before it stops the process.
-
-On Windows the program runs without a console window, and ends together with izumi.
-
-Single-file runtimes work well: `bun build --compile --target=bun-linux-x64`, `deno compile`, Go,
-or Rust. Build each platform's package with its own `compatibility.json`, and sign them all with
-the same key.
-
-## The provider module
-
-The provider module is plain JavaScript (an ES module whose default export is the provider). It
-runs in izumi's extension worker, where `fetch` goes through izumi. It is either:
-
-- a **stream provider** (`"type": "onlinestream-provider"`), with `search(options)`,
-  `findEpisodes(id)` and `findEpisodeServer(episode, server)`; or
-- a **torrent provider** (`"type": "torrent"`), with `single(query)`, `batch(query)` and
-  `movie(query)`, each returning results with at least a `title` and a 40-character `hash`.
-
-The query and result types are in izumi's
-[`src/lib/extensions/types.ts`](https://github.com/nickEatsBread/izumi/blob/main/src/lib/extensions/types.ts).
-An `izumi-js` package ships this module as its `extension.js`; a service serves it at the path
-`main` names.
-
-## Publishing from your repository
-
-Publish a store index in your repository, for example `izumi/store.json`, and the packages as
-release assets. Users can add that store by link, and this repository reads the same file.
+## `plugin.json`
 
 ```json
 {
   "app": "izumi",
-  "kind": "store",
+  "kind": "plugin",
   "schemaVersion": 1,
-  "id": "my-source",
-  "name": "My Source",
-  "entries": [
-    {
-      "kind": "source",
-      "sourceType": "package",
-      "backend": "izumi-service",
-      "id": "example.my-source",
-      "name": "My Source",
-      "version": "1.0.0",
-      "author": "Your name",
-      "description": "What it does, and what it needs from the user (an account, a key).",
-      "icon": "icon.png",
-      "homepage": "https://github.com/you/my-source",
-      "languages": ["en"],
-      "content": ["anime"],
-      "builds": {
-        "linux-x86_64": { "url": "https://github.com/you/my-source/releases/download/v1.0.0/my-source-linux-x86_64.izumi-ext", "sha256": "…", "bytes": 41234567 },
-        "windows-x86_64": { "url": "https://github.com/you/my-source/releases/download/v1.0.0/my-source-windows-x86_64.izumi-ext", "sha256": "…", "bytes": 42345678 }
-      }
-    }
-  ]
+  "pluginApi": 1,
+  "id": "example.my-plugin",
+  "name": "My Plugin",
+  "version": "1.0.0",
+  "author": "Your name",
+  "description": "What it does, and what it needs from the user.",
+  "main": { "path": "main.js", "sha256": "written by scripts/pin-main.mjs" },
+  "permissions": {
+    "scopes": ["network", "player.events", "player.panel"],
+    "network": { "domains": ["api.example.com"], "reason": "Sends your question to the example service, and nowhere else." }
+  },
+  "settings": [
+    { "id": "apiKey", "type": "secret", "label": "API key", "description": "Stays on this device." }
+  ],
+  "panel": { "label": "My Plugin", "placeholder": "Ask something…" }
 }
 ```
 
-- An `izumi-js` entry has `url`, `sha256` and `bytes` directly instead of `builds`.
-- Relative links resolve against the store file. Raw GitHub links into your followed branch are
-  pinned to the reviewed commit when this repository lists you.
-- `sha256` and `bytes` must be exact. Generate the file with a script after building, never by hand.
-- A store may also list themes (`"kind": "theme"`, the same fields as an
-  [izumi-themes](https://github.com/nickEatsBread/izumi-themes) listing with `url`, `sha256` and `bytes`)
-  for a pack to apply.
+| Field | Rules |
+| --- | --- |
+| `id` | Permanent. Lowercase words joined by dots or hyphens, like `com.example.name`. |
+| `version` | Three numbers, like `1.0.0`. |
+| `name`, `author`, `description` | Up to 60, 80 and 400 characters. |
+| `main` | `path`: a `.js` file next to `plugin.json`. `sha256`: its SHA-256, so izumi runs exactly that file. |
+| `permissions.scopes` | What it may do (below). Ask only for what it needs. |
+| `permissions.network` | Needed with `network`. `domains`: https hosts (`*.example.com` allowed). `fromSetting`: a `url` setting whose address the user types. `reason`: shown to the user before they install. |
+| `settings` | Up to 40. `type` is `text`, `secret`, `toggle`, `select` (with `options`), `number` or `url`. A secret can't have a `default`. |
+| `panel` | A panel in the player, with its button label and prompt. Needs `player.panel`. |
 
-Try it before submitting: in izumi open **Settings → Store → Add store** and paste the raw link to
-your `store.json` (or open `izumi://store/add?url=<link>`), then install your source from there.
+`plugin.json` may be at most 64 KB, and the main file at most 2 MB.
+
+### Scopes
+
+| Scope | What it allows |
+| --- | --- |
+| `network` | `izumi.fetch` to the listed domains, and to the address of the `fromSetting` setting. Only https, except that one address when it is on the user's own computer. Other local and private addresses are refused. |
+| `player.events` | `izumi.player.status()`: what is playing, the position, the duration and whether it is paused. |
+| `player.subtitles` | `izumi.player.subtitles()`: the selected text subtitle track as cues. |
+| `player.control` | `izumi.player.seek(seconds)`. |
+| `player.panel` | `izumi.ui.setPanel(state)`: a prompt, steps and result cards that izumi draws. |
+
+Every plugin has its settings, 5 MB of storage and a log without asking.
+
+## `main.js`
+
+The main file is an ES module whose default export has an `activate` function. izumi calls it with
+the `izumi` object, the plugin's only way to reach anything:
+
+```js
+export default {
+  async activate(izumi) {
+    izumi.on('prompt', async ({ text }) => {
+      const status = await izumi.player.status()
+      izumi.log('asked about', status.title, text)
+    })
+  },
+}
+```
+
+| Call | Returns |
+| --- | --- |
+| `izumi.settings.get()` | The setting values, secrets included. |
+| `izumi.storage.get(key)`, `.set(key, value)`, `.delete(key)` | The plugin's own storage. |
+| `izumi.fetch(url, { method, headers, body })` | `GET` or `POST` only. `{ status, ok, headers, text(), json() }`. |
+| `izumi.player.status()` | `{ open: false }`, or `{ open, title, episode, anilistId, position, duration, paused }`. |
+| `izumi.player.subtitles()` | `{ available, track, cues: [{ start, end, text }], tracks }`, or `{ available: false, reason }`. The cues are shifted by the user's subtitle delay. |
+| `izumi.player.seek(seconds)` | Seeks the player. |
+| `izumi.ui.setPanel({ activity, turns })` | Draws the player panel. A turn is `{ id, question, steps, text, seconds }`; a step is `{ label, state, icon, cards }`; a card is `{ id, title, subtitle, meta, quote, image: 'poster', icon }`. |
+| `izumi.ui.notice(text)` | A short notice in the player. |
+| `izumi.log(...parts)` | A line in the plugin's log (**Settings → Plugins → Log**). |
+| `izumi.on(name, handler)` | Panel events: `prompt` (`{ text }`), `select` (`{ id }` of a card), `stop` and `reset`. |
+
+The plugin runs in a Worker inside a sandboxed frame. `fetch`, `XMLHttpRequest`, `WebSocket` and
+`EventSource` are removed, and the frame's content security policy blocks every other connection.
+izumi stops a plugin that stops answering. Panels carry data only: izumi draws them, and the only
+image is the playing title's cover.
+
+## Pinning the main file
+
+After every change to the main file, write its hash into `plugin.json`:
+
+```sh
+node scripts/pin-main.mjs path/to/plugin
+```
+
+`scripts/pin-main.mjs` is in this repository; copy it into yours if you like. Keep the files with LF
+line endings (`* text=auto eol=lf` in `.gitattributes`), or a Windows checkout changes the hash.
+
+## Trying it
+
+In izumi, open **Settings → Plugins**, switch plugins on, and either pick `plugin.json` and its main
+file from disk, or paste the raw link to your `plugin.json`. izumi shows what it asks for before it
+installs.
+
+## Getting listed
+
+Add `plugins/<id>/listing.json` pointing at your repository, the path of your `plugin.json` and the
+commit to list ([listing](listing.md)), then follow [Submitting](../README.md#submitting-a-plugin-a-source-or-a-pack).
+After that, every commit that changes your plugin's folder is checked, scanned and listed within the
+hour, unless it asks for different permissions: that needs a pull request.
 
 ## Before you submit
 
-- [ ] The package holds exactly the five files, and `id` and `version` match the store entry.
-- [ ] Every build is signed with the same key, and the key is kept out of the repository.
-- [ ] A service listens on `127.0.0.1` only, keeps its data in `IZUMI_EXTENSION_DATA_DIR`, and exits
-      when izumi does.
-- [ ] Credentials go only to the service they belong to.
-- [ ] The packages come from a build of the public source at the commit you list.
-- [ ] You installed it from your own store link and played something.
+- [ ] It asks only for the scopes and domains it uses, and the `reason` says where data goes.
+- [ ] Secrets are `secret` settings, and go only to the service they belong to.
+- [ ] `main.sha256` matches the main file (run `scripts/pin-main.mjs`).
+- [ ] The repository is public and has a licence.
+- [ ] You installed it in izumi from your own `plugin.json` link and used it.

@@ -3,7 +3,7 @@
 // the listings produce.
 //
 //   node scripts/build.mjs            check (npm test)
-//   node scripts/build.mjs --write    regenerate the files, and record a new plugin's signingKey
+//   node scripts/build.mjs --write    regenerate the files, and record a new source's signingKey
 //   node scripts/build.mjs --scan     also run ClamAV over every file checked (CI always does)
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -17,13 +17,13 @@ const problems = []
 let count = 0
 try {
   const listings = readListings(root)
-  count = listings.plugins.length + listings.packs.length
+  count = Object.values(listings).reduce((sum, list) => sum + list.length, 0)
   const { files, keys, errors } = await buildStore(listings, io)
   problems.push(...errors.map((error) => error.message))
-  for (const listing of listings.plugins) {
+  for (const listing of listings.sources) {
     if (listing.signingKey || !keys[listing.id]) continue
-    if (write) writeListing(root, 'plugins', { ...listing, signingKey: keys[listing.id] })
-    else problems.push(`plugins/${listing.id}: record the signer with "signingKey": "${keys[listing.id]}" (npm run build does it)`)
+    if (write) writeListing(root, 'sources', { ...listing, signingKey: keys[listing.id] })
+    else problems.push(`sources/${listing.id}: record the signer with "signingKey": "${keys[listing.id]}" (npm run build does it)`)
   }
   try {
     io.scan()

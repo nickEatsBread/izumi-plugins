@@ -1,20 +1,39 @@
 # Running your own marketplace
 
 izumi isn't limited to its own stores. Anyone can publish a store, and users add it under
-**Settings → Store → Add store** (or with an `izumi://store/add?url=<link>` link). Once added, its
-plugins, themes and packs show up in the Store next to izumi's own. Nothing installs until the user
-chooses it.
+**Settings → Store → Add store**, under **Stores** on the Plugins page, or with an
+`izumi://store/add?url=<link>` link. Once added, its plugins show up under **Settings → Plugins**,
+and its sources, themes and packs in the Store, next to izumi's own. Nothing installs until the
+user chooses it.
 
 There are two ways to run one.
 
 ## A single store file
 
-If you publish your own plugins, the `store.json` in your repository is already a store
-([building a plugin](building-a-plugin.md#publishing-from-your-repository)). Share its raw link.
+If you publish your own sources, the `store.json` in your repository is already a store
+([building a source](building-a-source.md#publishing-from-your-repository)). Share its raw link.
+
+A store can list plugins too. Each is an entry pointing at a `plugin.json`, with that file's exact
+SHA-256 and size (the `plugin.json` in turn pins its main file):
+
+```json
+{
+  "kind": "plugin",
+  "id": "example.my-plugin",
+  "name": "My Plugin",
+  "version": "1.0.0",
+  "author": "Your name",
+  "description": "What it does.",
+  "pluginApi": 1,
+  "url": "https://raw.githubusercontent.com/you/my-plugin/<commit>/plugin/plugin.json",
+  "sha256": "…",
+  "bytes": 1234
+}
+```
 
 ## A reviewed marketplace like this one
 
-To list other people's plugins with the same pinning, checks and virus scans:
+To list other people's plugins, sources and packs with the same pinning, checks and virus scans:
 
 1. Fork this repository (or use it as a template).
 2. Edit `marketplace.json`:

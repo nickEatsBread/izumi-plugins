@@ -28,10 +28,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Commit moved pins
         run: |
-          [ -n "$(git status --porcelain -- plugins packs store.json)" ] || exit 0
+          [ -n "$(git status --porcelain -- sources plugins packs store.json)" ] || exit 0
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add plugins packs store.json
+          git add sources plugins packs store.json
           git commit -q -m 'chore: move pins to scanned commits' \
             -m "$(jq -r '.updated[] | "\(.ids | join(", ")): \(.repo)@\(.commit[0:12])"' update-report.json)"
           git push

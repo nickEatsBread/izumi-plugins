@@ -84,20 +84,20 @@ function fixture({ commit = COMMIT, linux = {}, windows = {}, urls = new Map() }
   return { ...ioFor(urls), urls }
 }
 
-const plugin = (extra = {}) => ({ id: 'example.source', repo: 'someone/example-source', branch: 'main', store: 'izumi/store.json', commit: COMMIT, themes: ['example.look'], ...extra })
+const source = (extra = {}) => ({ id: 'example.source', repo: 'someone/example-source', branch: 'main', store: 'izumi/store.json', commit: COMMIT, themes: ['example.look'], ...extra })
 const pack = (extra = {}) => ({ id: 'example.pack', repo: 'someone/example-source', branch: 'main', pack: 'izumi/pack.json', commit: COMMIT, ...extra })
 const firstError = async (listings, options = {}) => (await buildStore(listings, fixture(options).io)).errors[0]?.message ?? ''
 
-test('a plugin and a pack are listed pinned to the checked commit', async () => {
+test('a source and a pack are listed pinned to the checked commit', async () => {
   const { io, kept } = fixture()
-  const { files, keys, errors } = await buildStore({ plugins: [plugin()], packs: [pack()] }, io)
+  const { files, keys, errors } = await buildStore({ sources: [source()], packs: [pack()] }, io)
   assert.deepEqual(errors, [])
   assert.equal(keys['example.source'], fingerprint(keyA))
   const store = JSON.parse(files['store.json'])
-  const [source, theme, listedPack] = store.entries
-  assert.equal(source.icon, `${PINNED}icon.svg`)
-  assert.equal(source.homepage, 'https://github.com/someone/example-source')
-  assert.deepEqual(Object.keys(source.builds), ['linux-x86_64', 'windows-x86_64'])
+  const [listedSource, theme, listedPack] = store.entries
+  assert.equal(listedSource.icon, `${PINNED}icon.svg`)
+  assert.equal(listedSource.homepage, 'https://github.com/someone/example-source')
+  assert.deepEqual(Object.keys(listedSource.builds), ['linux-x86_64', 'windows-x86_64'])
   assert.equal(theme.url, `${PINNED}theme.json`)
   assert.equal(listedPack.url, `${BASE_URL}packs/example.pack/pack.json`)
   assert.equal(listedPack.name, 'Example pack')
@@ -114,21 +114,21 @@ test('a plugin and a pack are listed pinned to the checked commit', async () => 
 test('a file that differs from its listed hash is refused', async () => {
   const { io, urls } = fixture()
   urls.set(`${RELEASE}linux.izumi-ext`, makePackage({ extra: 'payload.sh' }))
-  const { errors } = await buildStore({ plugins: [plugin()], packs: [] }, io)
+  const { errors } = await buildStore({ sources: [source()], packs: [] }, io)
   assert.match(errors[0].message, /linux-x86_64\.izumi-ext is \d+ bytes|does not match its listed sha256/)
 })
 
 test('packages must be what izumi installs, signed by the pinned key', async () => {
-  assert.match(await firstError({ plugins: [plugin()], packs: [] }, { linux: { signed: false } }), /must be signed/)
-  assert.match(await firstError({ plugins: [plugin()], packs: [] }, { linux: { platform: 'linux-aarch64' } }), /built for linux-aarch64, listed for linux-x86_64/)
-  assert.match(await firstError({ plugins: [plugin()], packs: [] }, { linux: { extra: 'run.sh' } }), /must contain exactly/)
-  assert.match(await firstError({ plugins: [plugin()], packs: [] }, { windows: { key: keyB } }), /same key/)
-  assert.match(await firstError({ plugins: [plugin({ signingKey: fingerprint(keyB) })], packs: [] }), /review a key change/)
+  assert.match(await firstError({ sources: [source()], packs: [] }, { linux: { signed: false } }), /must be signed/)
+  assert.match(await firstError({ sources: [source()], packs: [] }, { linux: { platform: 'linux-aarch64' } }), /built for linux-aarch64, listed for linux-x86_64/)
+  assert.match(await firstError({ sources: [source()], packs: [] }, { linux: { extra: 'run.sh' } }), /must contain exactly/)
+  assert.match(await firstError({ sources: [source()], packs: [] }, { windows: { key: keyB } }), /same key/)
+  assert.match(await firstError({ sources: [source({ signingKey: fingerprint(keyB) })], packs: [] }), /review a key change/)
 })
 
 test('a pack only installs what listings here pin', async () => {
-  assert.match(await firstError({ plugins: [], packs: [pack()] }), /no plugin listing here pins/)
-  assert.match(await firstError({ plugins: [plugin({ themes: [] })], packs: [pack()] }), /theme "example.look", which no listing here includes/)
+  assert.match(await firstError({ sources: [], packs: [pack()] }), /no source listing here pins/)
+  assert.match(await firstError({ sources: [source({ themes: [] })], packs: [pack()] }), /theme "example.look", which no listing here includes/)
 })
 
 test('a pack may keep installing from the theme catalog', async () => {
@@ -136,13 +136,13 @@ test('a pack may keep installing from the theme catalog', async () => {
   const raw = JSON.parse(urls.get(`${PINNED}pack.json`).toString('utf8'))
   raw.items[1].from.store = THEME_CATALOG_URL
   urls.set(`${PINNED}pack.json`, Buffer.from(JSON.stringify(raw)))
-  const { files, errors } = await buildStore({ plugins: [plugin({ themes: [] })], packs: [pack()] }, io)
+  const { files, errors } = await buildStore({ sources: [source({ themes: [] })], packs: [pack()] }, io)
   assert.deepEqual(errors, [])
   assert.equal(JSON.parse(files['packs/example.pack/pack.json']).items[1].from.store, THEME_CATALOG_URL)
 })
 
 test('links into the listed branch are pinned, other links are kept', () => {
-  const listing = plugin()
+  const listing = source()
   assert.equal(pinUrl('https://raw.githubusercontent.com/someone/example-source/refs/heads/main/a.png', PINNED, listing),
     `https://raw.githubusercontent.com/someone/example-source/${COMMIT}/a.png`)
   assert.equal(pinUrl('https://raw.githubusercontent.com/other/repo/main/a.png', PINNED, listing), 'https://raw.githubusercontent.com/other/repo/main/a.png')
@@ -150,10 +150,10 @@ test('links into the listed branch are pinned, other links are kept', () => {
 })
 
 test('listings are checked before anything is downloaded', () => {
-  assert.equal(checkListing('plugins', plugin({ branch: undefined }), 'example.source').branch, 'main')
-  assert.throws(() => checkListing('plugins', plugin(), 'other.folder'), /folder name/)
-  assert.throws(() => checkListing('plugins', plugin({ commit: 'main' }), 'example.source'), /40-character/)
-  assert.throws(() => checkListing('plugins', plugin({ store: '../x.json' }), 'example.source'), /path of a .json file/)
+  assert.equal(checkListing('sources', source({ branch: undefined }), 'example.source').branch, 'main')
+  assert.throws(() => checkListing('sources', source(), 'other.folder'), /folder name/)
+  assert.throws(() => checkListing('sources', source({ commit: 'main' }), 'example.source'), /40-character/)
+  assert.throws(() => checkListing('sources', source({ store: '../x.json' }), 'example.source'), /path of a .json file/)
   assert.throws(() => checkListing('packs', { ...pack(), store: 'x.json' }, 'example.pack'), /unknown field "store"/)
 })
 
@@ -171,10 +171,10 @@ test('a newer commit that passes moves the pins of its repository together', asy
   const { urls } = fixture()
   fixture({ commit: NEXT, urls })
   const { io, kept } = ioFor(urls, { head: async () => ({ sha: NEXT, date: '2026-10-29T12:00:00Z' }) })
-  const current = { plugins: [plugin({ signingKey: fingerprint(keyA) })], packs: [pack()] }
+  const current = { sources: [source({ signingKey: fingerprint(keyA) })], packs: [pack()] }
   const { listings, files, report } = await updatePins(current, io)
   assert.deepEqual(report.held, [])
-  assert.deepEqual(report.updated.map((item) => item.ids), [['plugins/example.source', 'packs/example.pack']])
+  assert.deepEqual(report.updated.map((item) => item.ids), [['sources/example.source', 'packs/example.pack']])
   assert.ok(listings.every(({ listing }) => listing.commit === NEXT && listing.updatedAt === '2026-10-29T12:00:00Z'))
   assert.match(files['store.json'], new RegExp(`example-source/${NEXT}/izumi/theme.json`))
   assert.equal(kept.length, 4, 'only the moving repository is downloaded and scanned')
@@ -185,18 +185,90 @@ test('a newer commit that fails, or a listing not yet reviewed, keeps the old pi
   const head = async () => ({ sha: NEXT })
   const urls = fixture().urls
   fixture({ commit: NEXT, urls, linux: { key: keyB }, windows: { key: keyB } })
-  const changedKey = await updatePins({ plugins: [plugin({ signingKey: fingerprint(keyA) })], packs: [] }, ioFor(urls, { head }).io)
+  const changedKey = await updatePins({ sources: [source({ signingKey: fingerprint(keyA) })], packs: [] }, ioFor(urls, { head }).io)
   assert.deepEqual(changedKey.listings, [])
   assert.match(changedKey.report.held[0].errors.join('\n'), /review a key change/)
 
   const clean = fixture().urls
   fixture({ commit: NEXT, urls: clean })
-  const unreviewed = await updatePins({ plugins: [plugin()], packs: [] }, ioFor(clean, { head }).io)
+  const unreviewed = await updatePins({ sources: [source()], packs: [] }, ioFor(clean, { head }).io)
   assert.deepEqual(unreviewed.listings, [])
   assert.match(unreviewed.report.held[0].errors[0], /no signingKey yet/)
 
-  const scanned = await updatePins({ plugins: [plugin({ signingKey: fingerprint(keyA) })], packs: [] },
+  const scanned = await updatePins({ sources: [source({ signingKey: fingerprint(keyA) })], packs: [] },
     ioFor(clean, { head, scan: () => { throw new Error('the virus scan flagged linux.izumi-ext: Win.Test FOUND') } }).io)
   assert.deepEqual(scanned.listings, [])
   assert.match(scanned.report.held[0].errors.join('\n'), /virus scan flagged/)
+})
+
+// A runtime plugin: plugin.json and its main file in one folder of the author's repository.
+const PLUGIN_REPO = 'someone/example-plugin'
+const pluginBase = (commit) => `https://raw.githubusercontent.com/${PLUGIN_REPO}/${commit}/plugin/`
+
+function pluginFixture({ commit = COMMIT, urls = new Map(), manifest = {}, code = 'export default { activate() {} }\n' } = {}) {
+  const main = Buffer.from(code)
+  const doc = {
+    app: 'izumi', kind: 'plugin', schemaVersion: 1, pluginApi: 1, id: 'example.plugin', name: 'Example', version: '1.0.0',
+    author: 'Someone', description: 'Does one thing.', main: { path: 'main.js', sha256: sha256(main) },
+    permissions: { scopes: ['player.events'] }, settings: [], ...manifest,
+  }
+  urls.set(`${pluginBase(commit)}plugin.json`, Buffer.from(JSON.stringify(doc)))
+  urls.set(`${pluginBase(commit)}main.js`, main)
+  return { ...ioFor(urls), urls }
+}
+const runtime = (extra = {}) => ({ id: 'example.plugin', repo: PLUGIN_REPO, branch: 'main', plugin: 'plugin/plugin.json', commit: COMMIT, ...extra })
+const pluginError = async (options) => (await buildStore({ sources: [], plugins: [runtime()], packs: [] }, pluginFixture(options).io)).errors[0]?.message ?? ''
+
+test('a plugin is listed from its plugin.json at the pinned commit, and both files are scanned', async () => {
+  const { io, kept, urls } = pluginFixture()
+  const { files, grants, errors } = await buildStore({ sources: [], plugins: [runtime({ updatedAt: '2026-11-16T10:00:00Z' })], packs: [] }, io)
+  assert.deepEqual(errors, [])
+  const manifest = urls.get(`${pluginBase(COMMIT)}plugin.json`)
+  assert.deepEqual(JSON.parse(files['store.json']).entries, [{
+    kind: 'plugin', id: 'example.plugin', name: 'Example', version: '1.0.0', author: 'Someone', description: 'Does one thing.',
+    pluginApi: 1, url: `${pluginBase(COMMIT)}plugin.json`, sha256: sha256(manifest), bytes: manifest.length,
+    homepage: `https://github.com/${PLUGIN_REPO}/tree/${COMMIT}/plugin`, updatedAt: '2026-11-16T10:00:00Z',
+  }])
+  assert.deepEqual(kept, ['example.plugin/plugin.json', 'example.plugin/main.js'])
+  assert.equal(grants['example.plugin'], JSON.stringify({ scopes: ['player.events'], domains: [], fromSetting: null }))
+})
+
+test('a plugin izumi would not run is refused', async () => {
+  assert.match(await pluginError({ manifest: { main: { path: 'main.js', sha256: 'f'.repeat(64) } } }), /main.js does not match main.sha256/)
+  assert.match(await pluginError({ manifest: { permissions: { scopes: ['library.write'] } } }), /unknown plugin permission "library.write"/)
+  assert.match(await pluginError({ manifest: { permissions: { scopes: ['network'] } } }), /needs permissions.network/)
+  assert.match(await pluginError({ manifest: { pluginApi: 2 } }), /pluginApi 1/)
+  assert.match(await pluginError({ manifest: { id: 'other.plugin' } }), /has the id "other.plugin", the listing "example.plugin"/)
+  assert.match(await pluginError({ manifest: { settings: [{ id: 'key', type: 'secret', label: 'Key', default: 'x' }] } }), /cannot have a default/)
+})
+
+test('plugin listings name a plugin.json', () => {
+  assert.equal(checkListing('plugins', runtime(), 'example.plugin').plugin, 'plugin/plugin.json')
+  assert.throws(() => checkListing('plugins', runtime({ store: 'store.json' }), 'example.plugin'), /unknown field "store"/)
+  assert.throws(() => checkListing('plugins', runtime({ plugin: 'plugin/manifest.json' }), 'example.plugin'), /plugin.json file/)
+  assert.throws(() => checkListing('plugins', runtime({ signingKey: 'a'.repeat(64) }), 'example.plugin'), /unknown field "signingKey"/)
+})
+
+test('a plugin pin follows its own folder, and a permission change waits for review', async () => {
+  const NEXT = 'b'.repeat(40)
+  const calls = []
+  const head = async (...args) => {
+    calls.push(args)
+    return { sha: NEXT, date: '2026-11-16T12:00:00Z' }
+  }
+  const { urls } = pluginFixture()
+  pluginFixture({ commit: NEXT, urls, code: 'export default { activate() { return 2 } }\n' })
+  const { io, kept } = ioFor(urls, { head })
+  const moved = await updatePins({ sources: [], plugins: [runtime()], packs: [] }, io)
+  assert.deepEqual(calls, [[PLUGIN_REPO, 'main', 'plugin']])
+  assert.deepEqual(moved.report.held, [])
+  assert.deepEqual(moved.listings.map(({ kind, listing }) => [kind, listing.commit, listing.updatedAt]), [['plugins', NEXT, '2026-11-16T12:00:00Z']])
+  assert.match(moved.files['store.json'], new RegExp(`example-plugin/${NEXT}/plugin/plugin.json`))
+  assert.equal(kept.length, 2, 'the new commit was downloaded and scanned')
+
+  const asking = pluginFixture().urls
+  pluginFixture({ commit: NEXT, urls: asking, manifest: { permissions: { scopes: ['player.events', 'player.control'] } } })
+  const held = await updatePins({ sources: [], plugins: [runtime()], packs: [] }, ioFor(asking, { head }).io)
+  assert.deepEqual(held.listings, [])
+  assert.match(held.report.held[0].errors.join('\n'), /plugins\/example.plugin: asks for different permissions/)
 })

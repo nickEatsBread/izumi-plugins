@@ -32,7 +32,7 @@ removes what it added.
 
 | Field | Rules |
 | --- | --- |
-| `id`, `version` | Like a plugin's: a permanent lowercase id, and `major.minor.patch`. |
+| `id`, `version` | Like a source's: a permanent lowercase id, and `major.minor.patch`. |
 | `name`, `description`, `author` | Text, or `{ "en": "…", "de": "…" }` with English as the fallback. Name up to 64 characters. |
 | `icon`, `banner`, `homepage` | Optional https links (relative links resolve against `pack.json`). |
 | `minAppVersion` | Optional. Older izumi versions say the pack needs an update. |
@@ -52,13 +52,13 @@ Try it before submitting: open `izumi://pack?url=<raw link to pack.json>`, or pa
 The pack izumi reads is a copy this repository writes to `packs/<id>/pack.json` from your file at the
 pinned commit:
 
-- Stores that a plugin listing here pins become this repository's store, so the pack installs the
+- Stores that a source listing here pins become this repository's store, so the pack installs the
   reviewed, scanned copies and keeps updating through them. The izumi theme catalog
   (`https://raw.githubusercontent.com/nickEatsBread/izumi-themes/main/index.json`) stays as it is.
-  Any other store is refused: list the plugin first.
-- Each source or theme an item installs from this store must be in a listing here. A plugin listing
+  Any other store is refused: list the source first.
+- Each source or theme an item installs from this store must be in a listing here. A source listing
   names the themes it brings in `themes`.
 - Raw GitHub links into your followed branch (the startup video, the icon) are pinned to the commit.
 
-A pack and the plugin it installs usually live in one repository. Listings from the same repository
+A pack and the source it installs usually live in one repository. Listings from the same repository
 and branch move to a new commit together, so they never point at different versions.
