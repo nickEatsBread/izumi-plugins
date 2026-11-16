@@ -3,5 +3,5 @@
   "branch": "main",
   "id": "izumi-plugins",
   "name": "izumi plugins",
-  "description": "Plugins and packs reviewed for izumi. Each listing is pinned to a commit of its author's repository that passed the checks and a virus scan."
+  "description": "Plugins, sources and packs reviewed for izumi. Each listing is pinned to a commit of its author's repository that passed the checks and a virus scan."
 }

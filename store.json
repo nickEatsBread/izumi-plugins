@@ -4,7 +4,21 @@
   "schemaVersion": 1,
   "id": "izumi-plugins",
   "name": "izumi plugins",
-  "description": "Plugins and packs reviewed for izumi. Each listing is pinned to a commit of its author's repository that passed the checks and a virus scan.",
+  "description": "Plugins, sources and packs reviewed for izumi. Each listing is pinned to a commit of its author's repository that passed the checks and a virus scan.",
   "homepage": "https://github.com/nickEatsBread/izumi-plugins",
-  "entries": []
+  "entries": [
+    {
+      "kind": "plugin",
+      "id": "watch.izumi.jump-to-moment",
+      "name": "Jump to a moment",
+      "version": "1.0.0",
+      "author": "Izumi",
+      "description": "Describe a scene and the player jumps to it. Uses the episode's subtitles and a chat model you choose, on your computer or with your own key.",
+      "pluginApi": 1,
+      "url": "https://raw.githubusercontent.com/nickEatsBread/izumi-plugins/f1752b8f24ef45e3345586f935ce87c0ec2a702b/official/jump-to-moment/plugin.json",
+      "sha256": "fa1123eadc3b7f70ac3f2059c069c82eb812966f36855980f9e33f92f225e262",
+      "bytes": 1770,
+      "homepage": "https://github.com/nickEatsBread/izumi-plugins/tree/f1752b8f24ef45e3345586f935ce87c0ec2a702b/official/jump-to-moment"
+    }
+  ]
 }
