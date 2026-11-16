@@ -1,0 +1,7 @@
+{
+  "id": "watch.izumi.jump-to-moment",
+  "repo": "nickEatsBread/izumi-plugins",
+  "branch": "main",
+  "plugin": "official/jump-to-moment/plugin.json",
+  "commit": "f1752b8f24ef45e3345586f935ce87c0ec2a702b"
+}

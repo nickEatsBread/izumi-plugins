@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs --write",
-    "test": "node --test scripts/lib.test.mjs && node scripts/build.mjs",
-    "ci": "node --test scripts/lib.test.mjs && node scripts/build.mjs --scan",
+    "test": "node --test scripts/lib.test.mjs \"official/**/*.test.mjs\" && node scripts/build.mjs",
+    "ci": "node --test scripts/lib.test.mjs \"official/**/*.test.mjs\" && node scripts/build.mjs --scan",
     "update": "node scripts/update.mjs"
   },
   "engines": {
