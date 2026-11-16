@@ -2,7 +2,7 @@
 
 A plugin adds a feature to izumi. It runs in izumi's plugin sandbox, with no access to the user's
 accounts, sources or files, and it can only do what the user allowed when they installed it. Users
-find plugins under **Settings → Plugins** (a beta, off until they switch it on).
+find plugins under **Settings → Sources and store → Plugins** (a beta, off until they switch it on).
 
 A plugin is two files in one folder of your repository:
 
@@ -92,7 +92,7 @@ export default {
 | `izumi.player.seek(seconds)` | Seeks the player. |
 | `izumi.ui.setPanel({ activity, turns })` | Draws the player panel. A turn is `{ id, question, steps, text, seconds }`; a step is `{ label, state, icon, cards }`; a card is `{ id, title, subtitle, meta, quote, image: 'poster', icon }`. |
 | `izumi.ui.notice(text)` | A short notice in the player. |
-| `izumi.log(...parts)` | A line in the plugin's log (**Settings → Plugins → Log**). |
+| `izumi.log(...parts)` | A line in the plugin's log (its page under **Settings → Sources and store → Plugins**). |
 | `izumi.on(name, handler)` | Panel events: `prompt` (`{ text }`), `select` (`{ id }` of a card), `stop` and `reset`. |
 
 The plugin runs in a Worker inside a sandboxed frame. `fetch`, `XMLHttpRequest`, `WebSocket` and
@@ -113,7 +113,7 @@ line endings (`* text=auto eol=lf` in `.gitattributes`), or a Windows checkout c
 
 ## Trying it
 
-In izumi, open **Settings → Plugins**, switch plugins on, and either pick `plugin.json` and its main
+In izumi, open **Settings → Sources and store → Plugins**, switch plugins on, and either pick `plugin.json` and its main
 file from disk, or paste the raw link to your `plugin.json`. izumi shows what it asks for before it
 installs.
 

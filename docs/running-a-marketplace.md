@@ -2,7 +2,7 @@
 
 izumi isn't limited to its own stores. Anyone can publish a store, and users add it under
 **Settings → Store → Add store**, under **Stores** on the Plugins page, or with an
-`izumi://store/add?url=<link>` link. Once added, its plugins show up under **Settings → Plugins**,
+`izumi://store/add?url=<link>` link. Once added, its plugins show up under **Settings → Sources and store → Plugins**,
 and its sources, themes and packs in the Store, next to izumi's own. Nothing installs until the
 user chooses it.
 

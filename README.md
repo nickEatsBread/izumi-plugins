@@ -20,7 +20,7 @@ picked up automatically once they pass the same checks.
 
 - **Plugins**: features that run in izumi's plugin sandbox, such as
   [Jump to a moment](official/jump-to-moment/). A plugin is a `plugin.json` and one JavaScript
-  module. izumi lists them under **Settings → Plugins**.
+  module. izumi lists them under **Settings → Sources and store → Plugins**.
 - **Sources**: sources packaged as signed `.izumi-ext` files, either a JavaScript module
   (`izumi-js`) or a local service with one build per platform (`izumi-service`). izumi lists them
   in **Settings → Store**.
@@ -57,7 +57,7 @@ meeting them later.
 1. **Build and publish it in your own repository.** Follow [building a plugin](docs/building-a-plugin.md),
    [building a source](docs/building-a-source.md) or [building a pack](docs/building-a-pack.md).
 2. **Install it from your own link.** In izumi, paste the raw link to your `plugin.json` under
-   **Settings → Plugins**; for a source, paste the raw link to your `store.json` under
+   **Settings → Sources and store → Plugins**; for a source, paste the raw link to your `store.json` under
    **Settings → Store → Add store**; for a pack, open `izumi://pack?url=<link to pack.json>`. Then
    use it.
 3. **Fork this repository and add a listing.** One folder per plugin, source or pack:
