@@ -93,6 +93,7 @@ test('the other APIs: Anthropic Messages, and chat completions for OpenRouter, G
   assert.deepEqual(claude.headers, { 'Content-Type': 'application/json', 'x-api-key': 'k', 'anthropic-version': '2023-06-01' })
   assert.deepEqual(claude.body, { model: 'claude-x', max_tokens: 1024, system: INSTRUCTIONS, messages: [{ role: 'user', content: 'q' }] })
   assert.equal(buildRequest({ kind: 'openrouter', key: 'k', model: 'm' }, 'q').url, 'https://openrouter.ai/api/v1/chat/completions')
+  assert.equal(buildRequest({ kind: 'openrouter', key: 'k', model: 'm' }, 'q').body.max_tokens, 2048, 'OpenRouter holds credit for max_tokens')
   assert.equal(buildRequest({ kind: 'google', key: 'k', model: 'm' }, 'q').url, 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
   const local = buildRequest({ kind: 'custom', endpoint: 'http://localhost:11434/v1/', key: '', model: 'm' }, 'q')
   assert.equal(local.url, 'http://localhost:11434/v1/chat/completions')

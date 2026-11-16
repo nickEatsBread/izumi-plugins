@@ -10,7 +10,7 @@
   "description": "Describe a scene and the player jumps to it. Uses the episode's subtitles and a chat model: sign in with ChatGPT or OpenRouter, paste an API key, or use a model on your computer.",
   "main": {
     "path": "main.js",
-    "sha256": "aec8eb74f910b252bdbcd6b53e12dfc125d9ed65fe7097165ee0ca8cc64531ea"
+    "sha256": "2ae7828b981ce18267e35e553eb1dca12a928f81ab00f6e74c9905242b126e75"
   },
   "permissions": {
     "scopes": [
@@ -39,32 +39,36 @@
       "id": "openrouterModel",
       "type": "select",
       "label": "OpenRouter model",
-      "description": "Used when you sign in with OpenRouter. Each is that maker's newest model of its kind.",
-      "default": "~google/gemini-flash-latest",
+      "description": "Used when you sign in with OpenRouter. Free models cost nothing (OpenRouter limits how many questions a day); the others use your OpenRouter credits.",
+      "default": "openrouter/free",
       "options": [
         {
+          "value": "openrouter/free",
+          "label": "Free models (OpenRouter picks one)"
+        },
+        {
           "value": "~google/gemini-flash-latest",
-          "label": "Gemini Flash (Google)"
+          "label": "Gemini Flash (Google, paid)"
         },
         {
           "value": "~google/gemini-pro-latest",
-          "label": "Gemini Pro (Google)"
+          "label": "Gemini Pro (Google, paid)"
         },
         {
           "value": "~anthropic/claude-haiku-latest",
-          "label": "Claude Haiku (Anthropic)"
+          "label": "Claude Haiku (Anthropic, paid)"
         },
         {
           "value": "~anthropic/claude-sonnet-latest",
-          "label": "Claude Sonnet (Anthropic)"
+          "label": "Claude Sonnet (Anthropic, paid)"
         },
         {
           "value": "~openai/gpt-mini-latest",
-          "label": "GPT mini (OpenAI)"
+          "label": "GPT mini (OpenAI, paid)"
         },
         {
           "value": "~deepseek/deepseek-flash-latest",
-          "label": "DeepSeek Flash"
+          "label": "DeepSeek Flash (paid)"
         }
       ]
     },
