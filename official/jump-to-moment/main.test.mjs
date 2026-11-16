@@ -191,3 +191,61 @@ test('signs in with ChatGPT through the browser, then asks with the plan', async
   assert.equal(storage.get('chatgptClientId'), 'oaiapp_9')
   assert.equal(account.buttons[0].label, 'Continue with ChatGPT')
 })
+
+test('after invalid_grant on a new registration, authorizes again once under the issued client id', async () => {
+  const secrets = new Map(), storage = new Map(), handlers = {}, opened = []
+  let exchanges = 0
+  const reply = (status, body) => ({ status, ok: status < 300, text: async () => JSON.stringify(body), json: async () => body })
+  await plugin.activate({
+    settings: { get: async () => ({}) },
+    storage: { get: async (k) => storage.get(k) ?? null, set: async (k, v) => { storage.set(k, v) }, delete: async (k) => { storage.delete(k) } },
+    secrets: { get: async (k) => secrets.get(k) ?? null, set: async (k, v) => { secrets.set(k, v) }, delete: async (k) => { secrets.delete(k) } },
+    signin: {
+      listen: async () => ({ port: 50200 + opened.length }),
+      open: async (url) => { opened.push(new URL(url)) },
+      // A reauthorization callback may leave out client_id.
+      wait: async () => ({ code: `code-${opened.length}`, state: opened.at(-1).searchParams.get('state'), ...(opened.length === 1 ? { client_id: 'oaiapp_7' } : {}) }),
+      cancel: async () => {},
+    },
+    fetch: async (url, init) => {
+      exchanges++
+      if (exchanges === 1) return reply(400, { error: 'invalid_grant' })
+      const fields = new URLSearchParams(init.body)
+      assert.equal(fields.get('client_id'), 'oaiapp_7')
+      assert.equal(fields.get('code'), 'code-2')
+      const id = jwt({ iss: 'https://auth.openai.com', aud: 'oaiapp_7', nonce: opened[1].searchParams.get('nonce'), exp: Date.now() / 1000 + 3600 })
+      return reply(200, { access_token: 'at', refresh_token: 'rt', id_token: id, expires_in: 3600, scope: 'chatgpt.tokens.use.direct' })
+    },
+    player: {}, ui: { setPanel: async () => {}, setAccount: async () => {}, notice: async () => {} }, log: () => {},
+    on: (name, handler) => { handlers[name] = handler },
+  })
+  await handlers.account({ id: 'chatgpt' })
+  assert.equal(opened.length, 2)
+  assert.equal(opened[0].searchParams.get('client_id'), 'dynamic_agent_client')
+  assert.equal(opened[1].searchParams.get('client_id'), 'oaiapp_7')
+  assert.equal(opened[1].searchParams.get('agent_name_hint'), null)
+  assert.equal(JSON.parse(secrets.get('account')).refreshToken, 'rt')
+})
+
+test('a plan that cannot be shared ends with a pointer to OpenRouter or a key, not "try again"', async () => {
+  const storage = new Map([['chatgptClientId', 'oaiapp_7']]), handlers = {}, opened = []
+  let account
+  await plugin.activate({
+    settings: { get: async () => ({}) },
+    storage: { get: async (k) => storage.get(k) ?? null, set: async (k, v) => { storage.set(k, v) }, delete: async () => {} },
+    secrets: { get: async () => null, set: async () => {}, delete: async () => {} },
+    signin: {
+      listen: async () => ({ port: 50300 }),
+      open: async (url) => { opened.push(new URL(url)) },
+      wait: async () => ({ code: 'c', state: opened.at(-1).searchParams.get('state') }),
+      cancel: async () => {},
+    },
+    fetch: async () => ({ status: 400, ok: false, json: async () => ({ error: 'invalid_grant' }) }),
+    player: {}, ui: { setPanel: async () => {}, setAccount: async (s) => { account = s }, notice: async () => {} }, log: () => {},
+    on: (name, handler) => { handlers[name] = handler },
+  })
+  await handlers.account({ id: 'chatgpt' })
+  assert.equal(opened.length, 2)
+  assert.match(account.text, /invalid_grant.*required permission is unavailable.*OpenRouter or use an API key/)
+  assert.equal(account.buttons[0].label, 'Continue with ChatGPT')
+})

@@ -159,6 +159,19 @@ async function browserSignIn(host, path, authorizeUrl) {
 }
 
 async function signInChatGPT() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await chatgptAttempt()
+    } catch (error) {
+      // OpenAI's recovery for invalid_grant (a first code can fail after registration succeeds): drop
+      // the code and authorize again under the issued client id. Once; the browser opens again.
+      if (!error.invalidGrant || attempt > 1) throw error
+      izumi.log('sign-in: invalid_grant, authorizing again with the issued client id')
+    }
+  }
+}
+
+async function chatgptAttempt() {
   let clientId = await izumi.storage.get('chatgptClientId')
   const previous = await readAccount()
   const verifier = randomToken(), state = randomToken(), nonce = randomToken()
@@ -178,7 +191,11 @@ async function signInChatGPT() {
     throw new Error("OpenAI's answer was for a different registration. Try again.")
   }
   const { ok, status, body } = await postForm(`${OPENAI_AUTH}/api/accounts/oauth/token`, { grant_type: 'authorization_code', client_id: clientId, code, code_verifier: verifier, redirect_uri: redirectUri, resource: OPENAI_API })
-  if (!ok) throw new Error(`OpenAI refused the sign-in (${body.error?.code ?? body.error ?? status}). Try again.`)
+  if (!ok) {
+    const reason = body.error?.code ?? body.error ?? status
+    const why = body.error_description ?? body.error?.message
+    throw Object.assign(new Error(`OpenAI refused the sign-in (${reason}${why ? `: ${String(why).slice(0, 160)}` : ''}). Try again.`), { invalidGrant: reason === 'invalid_grant' })
+  }
   const claims = checkIdToken(body.id_token, { clientId, nonce })
   let granted = body.scope ?? query.scope
   if (granted === undefined) try { granted = jwtClaims(body.access_token).scope } catch { granted = '' }
@@ -209,7 +226,11 @@ async function signIn(provider) {
     await (provider === 'chatgpt' ? signInChatGPT() : signInOpenRouter())
     return true
   } catch (error) {
-    accountNote = /timed out or was cancelled/.test(String(error?.message)) ? 'Sign-in was cancelled.' : String(error?.message ?? error)
+    const cancelled = /timed out or was cancelled|^Sign-in was cancelled/.test(String(error?.message))
+    accountNote = cancelled ? 'Sign-in was cancelled.' : String(error?.message ?? error)
+    // A plan or workspace that can't share its usage (ChatGPT says "A required permission is
+    // unavailable") ends in a cancel, or in a code OpenAI won't exchange.
+    if (provider === 'chatgpt' && (cancelled || error?.invalidGrant)) accountNote += " If ChatGPT said a required permission is unavailable, your plan can't be used in apps: sign in with OpenRouter or use an API key instead."
     izumi.log('sign-in:', accountNote)
     return false
   } finally {

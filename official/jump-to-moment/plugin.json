@@ -10,7 +10,7 @@
   "description": "Describe a scene and the player jumps to it. Uses the episode's subtitles and a chat model: sign in with ChatGPT or OpenRouter, paste an API key, or use a model on your computer.",
   "main": {
     "path": "main.js",
-    "sha256": "9773ebdb3dded7edc0f379a0a4190983b4f09043bd7501c538ed0fa44f90fec3"
+    "sha256": "aec8eb74f910b252bdbcd6b53e12dfc125d9ed65fe7097165ee0ca8cc64531ea"
   },
   "permissions": {
     "scopes": [
