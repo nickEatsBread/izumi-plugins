@@ -69,6 +69,19 @@
       "sha256": "fa1123eadc3b7f70ac3f2059c069c82eb812966f36855980f9e33f92f225e262",
       "bytes": 1770,
       "homepage": "https://github.com/nickEatsBread/izumi-plugins/tree/f1752b8f24ef45e3345586f935ce87c0ec2a702b/official/jump-to-moment"
+    },
+    {
+      "kind": "pack",
+      "id": "crunchy-deck",
+      "name": "CrunchyDeck for izumi",
+      "version": "0.1.4",
+      "author": "nickEatsBread",
+      "description": "Watch Crunchyroll in izumi: your Crunchyroll account as a source, a Crunchyroll-orange look, the Crunchyroll intro at start-up, and protected playback on Linux and the Steam Deck. Needs a Crunchyroll account. Inspired by Crunchy Deck.",
+      "icon": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/17cd4cbf73c1c4f1497b523561827dd5dcea8d6e/izumi/icon.svg",
+      "homepage": "https://github.com/nickEatsBread/crunchydeck-for-izumi",
+      "url": "https://raw.githubusercontent.com/nickEatsBread/izumi-plugins/main/packs/crunchy-deck/pack.json",
+      "sha256": "8692201fba47c4f0b632820c98980ab8330c832f6b4e390ad04efe06c14c0475",
+      "bytes": 1776
     }
   ]
 }
