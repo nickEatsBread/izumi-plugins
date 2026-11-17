@@ -13,9 +13,9 @@
       "backend": "izumi-service",
       "id": "crunchyroll.izumi",
       "name": "Crunchyroll",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "description": "Your Crunchyroll account as an izumi source: search, episodes, dubs and subtitles. Needs a Crunchyroll account.",
-      "icon": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/3f98c722b53342e31fcb360bae28aab4e6ebf24b/izumi/icon.svg",
+      "icon": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/dd84b52ba417029b1f441d092823bf031875d69c/izumi/icon.svg",
       "homepage": "https://github.com/nickEatsBread/crunchydeck-for-izumi",
       "languages": [
         "en"
@@ -23,17 +23,17 @@
       "content": [
         "anime"
       ],
-      "updatedAt": "2026-11-17T14:25:54Z",
+      "updatedAt": "2026-11-17T16:47:20Z",
       "builds": {
         "linux-x86_64": {
-          "url": "https://github.com/nickEatsBread/crunchydeck-for-izumi/releases/download/v0.1.4/crunchyroll-linux-x86_64.izumi-ext",
-          "sha256": "574381723e33cf3bcb068966bb81de8dc6ea020eca4a5a75c4a7d8dd26f8984c",
-          "bytes": 52564434
+          "url": "https://github.com/nickEatsBread/crunchydeck-for-izumi/releases/download/v0.1.5/crunchyroll-linux-x86_64.izumi-ext",
+          "sha256": "a8df7bb4f080e77617f6d09068beeb707eb4fcdbe8e4109379f3b8670357bf60",
+          "bytes": 52566270
         },
         "windows-x86_64": {
-          "url": "https://github.com/nickEatsBread/crunchydeck-for-izumi/releases/download/v0.1.4/crunchyroll-windows-x86_64.izumi-ext",
-          "sha256": "59f228169d07cc69716029b9fa40f96a6a27de1130d5ee52977209b533c55ba0",
-          "bytes": 55494581
+          "url": "https://github.com/nickEatsBread/crunchydeck-for-izumi/releases/download/v0.1.5/crunchyroll-windows-x86_64.izumi-ext",
+          "sha256": "18bf6eb91955554a495326aa3790ec562978446c0d7102b2ae2d0b1987dd4adb",
+          "bytes": 55496225
         }
       }
     },
@@ -41,10 +41,10 @@
       "kind": "theme",
       "id": "crunchy-deck",
       "name": "Crunchy Deck",
-      "version": "2.0.19",
+      "version": "2.0.20",
       "author": "nickEatsBread",
       "description": "Inspired by Crunchy Deck's look: Crunchyroll orange on near-black, a slide-in menu instead of a top bar or rail, a tall featured banner with the title logo, Sub | Dub and the age rating, cards with their titles on the artwork, and season pills over an episode grid.",
-      "themeApi": 7,
+      "themeApi": 9,
       "tags": [
         "Dark",
         "Drawer"
@@ -53,11 +53,11 @@
         "desktop",
         "phone"
       ],
-      "url": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/3f98c722b53342e31fcb360bae28aab4e6ebf24b/izumi/theme.json",
-      "sha256": "f8f5b09eada6620672700e171a983c9c9b6496d7c12fd7f56ef9d25792ad568c",
-      "bytes": 61987,
+      "url": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/dd84b52ba417029b1f441d092823bf031875d69c/izumi/theme.json",
+      "sha256": "94446d09ef68568ea71c5cf1844d85091e3572056e1002c624ff5ceeb370e242",
+      "bytes": 62543,
       "homepage": "https://github.com/nickEatsBread/crunchydeck-for-izumi",
-      "updatedAt": "2026-11-17T14:25:54Z"
+      "updatedAt": "2026-11-17T16:47:20Z"
     },
     {
       "kind": "plugin",
@@ -76,15 +76,15 @@
       "kind": "pack",
       "id": "crunchy-deck",
       "name": "CrunchyDeck for izumi",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "author": "nickEatsBread",
       "description": "Watch Crunchyroll in izumi: your Crunchyroll account as a source, a Crunchyroll-orange look, the Crunchyroll intro at start-up, and protected playback on Linux and the Steam Deck. Needs a Crunchyroll account. Inspired by Crunchy Deck.",
-      "icon": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/3f98c722b53342e31fcb360bae28aab4e6ebf24b/izumi/icon.svg",
+      "icon": "https://raw.githubusercontent.com/nickEatsBread/crunchydeck-for-izumi/dd84b52ba417029b1f441d092823bf031875d69c/izumi/icon.svg",
       "homepage": "https://github.com/nickEatsBread/crunchydeck-for-izumi",
       "url": "https://raw.githubusercontent.com/nickEatsBread/izumi-plugins/main/packs/crunchy-deck/pack.json",
-      "sha256": "4e3e070ed6a249113b64813a840741958cf4b5af395f2a8af3f99cf60d5e6043",
+      "sha256": "1fc3f03f92e6f1073cede7b94f78139ea9a36fbfa7678c3cb7a20b8f30bd08ae",
       "bytes": 1776,
-      "updatedAt": "2026-11-17T14:25:54Z"
+      "updatedAt": "2026-11-17T16:47:20Z"
     }
   ]
 }
