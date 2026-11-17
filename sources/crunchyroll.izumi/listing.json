@@ -1,0 +1,11 @@
+{
+  "id": "crunchyroll.izumi",
+  "repo": "nickEatsBread/crunchydeck-for-izumi",
+  "branch": "main",
+  "store": "izumi/store.json",
+  "commit": "17cd4cbf73c1c4f1497b523561827dd5dcea8d6e",
+  "signingKey": "974cf56753bc2dddc1656c1943b999977f403af708fce032e4b8ee7f92f84519",
+  "themes": [
+    "crunchy-deck"
+  ]
+}
